@@ -57,10 +57,8 @@ const loadingUsers = ref(false);
 
 const canUpdate = computed(() => {
 	if (!dateRange.value.start || !dateRange.value.end) return false;
-	// substituteUser должен быть массивом с одним выбранным id
 	if (!Array.isArray(substituteUser.value) || substituteUser.value.length !== 1)
 		return false;
-	// Для каждого approverRows должен быть выбран backupApproverId (id пользователя)
 	const allSelected = approverRows.value.every(
 		(row) =>
 			backupSelections.value[row.id] &&

@@ -1,3 +1,12 @@
+<script setup lang="ts">
+import MultiSelect from "./MultiSelect.vue";
+
+const props = defineProps<{
+	options: { label: string; value: string | number }[];
+}>();
+const modelValue = defineModel<(string | number)[]>({ required: true });
+</script>
+
 <template>
 	<div class="flex justify-between items-center w-full">
 		<div class="flex flex-col">
@@ -22,12 +31,3 @@
 		</div>
 	</div>
 </template>
-
-<script setup lang="ts">
-import MultiSelect from "./MultiSelect.vue";
-
-const props = defineProps<{
-	options: { label: string; value: string | number }[];
-}>();
-const modelValue = defineModel<(string | number)[]>({ required: true });
-</script>

@@ -39,9 +39,9 @@ function close() {
 	<Transition name="toast">
 		<div
 			v-if="visible && message"
-			class="fixed top-[7.5%] right-[1%] z-50 flex items-center gap-2 pl-2 bg-white rounded-[4px] border-l-4 border-[#3fb34f] transition-opacity duration-500"
-			style="filter: drop-shadow(3px 3px 22px rgba(0, 0, 0, 0.09))"
+			class="fixed top-[7.5%] right-[1%] z-50 flex items-center gap-2 pl-2 bg-white rounded-[4px] border-l-4 border-[#3fb34f] transition-opacity duration-500 drop-shadow-lg"
 		>
+			>
 			<img
 				:src="SuccessIcon"
 				alt="Success"

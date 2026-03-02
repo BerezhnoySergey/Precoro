@@ -56,12 +56,10 @@ if (typeof window !== "undefined") {
 	window.addEventListener("click", handleClickOutside);
 }
 
-// Очистка выбора
 const clearRange = () => {
 	internalValue.value = null;
 };
 
-// Скрытие календаря после выбора диапазона
 const onPickerUpdate = (value) => {
 	internalValue.value = value;
 	if (
@@ -179,5 +177,3 @@ const onPickerUpdate = (value) => {
 		</div>
 	</div>
 </template>
-
-<style></style>
