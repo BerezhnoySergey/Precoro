@@ -50,7 +50,6 @@ export async function fetchUsers(search = "", page = 1): Promise<UserOption[]> {
 		throw new Error("Failed to load users");
 	}
 	const result = await response.json();
-	// result.data — массив пользователей
 	return Array.isArray(result.data) ? result.data : [];
 }
 
