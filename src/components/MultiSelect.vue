@@ -1,5 +1,12 @@
 <script setup lang="ts">
-import { ref, computed, watch } from "vue";
+import {
+	ref,
+	computed,
+	watch,
+	nextTick,
+	onMounted,
+	onBeforeUnmount,
+} from "vue";
 import ArrowDownIcon from "../assets/images/icons/arrow-down.svg";
 import CancelIcon from "../assets/images/icons/cancel.svg";
 
@@ -23,6 +30,9 @@ const emit = defineEmits<{
 
 const search = ref("");
 const isOpen = ref(false);
+const wrapperRef = ref<HTMLElement | null>(null);
+const dropdownRef = ref<HTMLElement | null>(null);
+const dropdownDirection = ref<"up" | "down">("down");
 
 const filteredOptions = computed(() => {
 	if (!search.value) return props.options;
@@ -36,8 +46,6 @@ const toggleOption = (val: string | number) => {
 	isOpen.value = false;
 };
 
-const isSelected = (val: string | number) => props.modelValue.includes(val);
-
 const clearSearch = () => {
 	search.value = "";
 };
@@ -46,65 +54,129 @@ const clearSelection = () => {
 	emit("update:modelValue", []);
 };
 
-watch(isOpen, (open) => {
-	if (!open) clearSearch();
+const determineDropdownDirection = () => {
+	if (!wrapperRef.value) return;
+	const wrapperRect = wrapperRef.value.getBoundingClientRect();
+	const dropdownHeight = dropdownRef.value?.offsetHeight ?? 0;
+	const spaceBelow = window.innerHeight - wrapperRect.bottom;
+	const spaceAbove = wrapperRect.top;
+
+	dropdownDirection.value =
+		spaceBelow < dropdownHeight && spaceAbove > spaceBelow ? "up" : "down";
+};
+
+const handleClickOutside = (event: MouseEvent) => {
+	if (!isOpen.value) return;
+	if (!wrapperRef.value?.contains(event.target as Node)) {
+		isOpen.value = false;
+	}
+};
+
+const handleWindowResize = () => {
+	if (isOpen.value) determineDropdownDirection();
+};
+
+onMounted(() => {
+	document.addEventListener("click", handleClickOutside);
+	window.addEventListener("resize", handleWindowResize);
+});
+
+onBeforeUnmount(() => {
+	document.removeEventListener("click", handleClickOutside);
+	window.removeEventListener("resize", handleWindowResize);
+});
+
+watch(isOpen, async (open) => {
+	if (!open) {
+		clearSearch();
+		return;
+	}
+	await nextTick();
+	determineDropdownDirection();
 });
 </script>
 
 <template>
-	<div class="multi-select-wrapper">
-		<div v-if="!hideLabel" class="multi-select-label-row">
-			<span class="multi-select-label-message">Substitute User</span>
-			<span class="multi-select-label-star">*</span>
+	<div
+		:class="['relative', props.noBorder ? 'w-full' : 'w-[356px]']"
+		ref="wrapperRef"
+	>
+		<div v-if="!hideLabel" class="flex items-center mb-1">
+			<span class="font-semibold text-[13px] leading-[15px]"
+				>Substitute User</span
+			>
+			<span class="text-red-600 ml-0.5 font-semibold text-[13px] leading-[15px]"
+				>*</span
+			>
 		</div>
+
 		<div
-			class="multi-select-box"
-			:class="{ 'no-border': noBorder }"
+			:class="[
+				'flex items-center gap-1 cursor-pointer p-[1px_8px] rounded-lg',
+				props.noBorder
+					? 'w-full h-full border-0 rounded-none'
+					: 'w-[356px] h-[34px] border border-[#1d24524d]',
+				isOpen ? 'border-[#1d24524d]' : '',
+			]"
 			@click="isOpen = !isOpen"
 			tabindex="0"
 		>
 			<template v-if="modelValue.length">
-				<span class="multi-select-chip">
+				<span
+					class="bg-[#e8f0fe] text-[#1d2452] rounded px-2 py-[2px] text-[14px] leading-[144%] flex items-center"
+				>
 					{{
 						options.find((o) => o.value === modelValue[0])?.label ||
 						modelValue[0]
 					}}
 				</span>
 			</template>
-			<span v-else class="multi-select-placeholder">{{
-				placeholder || "Select..."
-			}}</span>
+			<span v-else class="text-gray-400 font-medium text-[14px] leading-[144%]">
+				{{ placeholder || "Select..." }}
+			</span>
+
 			<button
 				v-if="modelValue.length"
 				type="button"
-				class="multi-select-icon-btn"
+				class="ml-auto flex items-center justify-center p-0 mr-1 cursor-pointer bg-none border-none"
 				@click.stop="clearSelection"
 			>
-				<img :src="CancelIcon" alt="clear" style="width: 16px; height: 16px" />
+				<img :src="CancelIcon" alt="clear" width="16" height="16" />
 			</button>
-			<span v-else class="multi-select-icon-btn" style="pointer-events: none">
-				<img
-					:src="ArrowDownIcon"
-					alt="open"
-					style="width: 16px; height: 16px"
-				/>
+			<span
+				v-else
+				class="ml-auto flex items-center justify-center p-0 mr-1 pointer-events-none"
+			>
+				<img :src="ArrowDownIcon" alt="open" width="12" height="8" />
 			</span>
 		</div>
-		<div v-if="isOpen" class="multi-select-dropdown">
-			<input
-				v-model="search"
-				type="text"
-				class="multi-select-search"
-				:placeholder="'Поиск...'"
-				@click.stop
-			/>
-			<div v-if="!filteredOptions.length" class="multi-select-no-options">
-				Нет опций
+
+		<div
+			v-if="isOpen"
+			ref="dropdownRef"
+			:class="[
+				'absolute left-0 right-0 bg-white border border-[#1d24521a] rounded shadow-md z-10 max-h-[220px] overflow-y-auto flex flex-col',
+				dropdownDirection === 'up' ? 'bottom-full top-auto' : 'top-full',
+			]"
+			@click.stop
+		>
+			<div class="sticky top-0 bg-white border-b border-gray-200 z-10">
+				<input
+					v-model="search"
+					type="text"
+					class="w-full border-none outline-none bg-transparent text-[14px] p-2"
+					placeholder="Поиск..."
+				/>
 			</div>
+
+			<div v-if="!filteredOptions.length" class="p-2 text-gray-400 text-[13px]">
+				No options
+			</div>
+
 			<div
 				v-for="opt in filteredOptions"
 				:key="opt.value"
-				class="multi-select-option"
+				class="flex items-center gap-2 px-3 py-1.5 cursor-pointer text-[14px] rounded hover:bg-gray-100"
 				@click.stop="toggleOption(opt.value)"
 			>
 				<span>{{ opt.label }}</span>
@@ -112,138 +184,3 @@ watch(isOpen, (open) => {
 		</div>
 	</div>
 </template>
-
-<style scoped>
-.multi-select-wrapper {
-	width: 356px;
-	position: relative;
-}
-.multi-select-wrapper:has(.no-border) {
-	width: 100%;
-}
-
-.multi-select-label-row {
-	display: flex;
-	align-items: center;
-	margin-bottom: 4px;
-}
-.multi-select-label-message {
-	font-family: Inter, sans-serif;
-	font-weight: 600;
-	font-size: 13px;
-	line-height: 15px;
-	font-style: normal;
-}
-.multi-select-label-star {
-	color: #e53e3e;
-	margin-left: 2px;
-	font-family: Inter, sans-serif;
-	font-weight: 600;
-	font-size: 13px;
-	line-height: 15px;
-	font-style: normal;
-}
-.multi-select-box {
-	width: 356px;
-	height: 34px;
-	border-width: 1px;
-	border-radius: 8px;
-	padding-top: 1px;
-	padding-bottom: 1px;
-	background: rgba(255, 255, 255, 1);
-	border: 1px solid rgba(29, 36, 82, 0.3);
-	display: flex;
-	flex-wrap: nowrap;
-	gap: 4px;
-	align-items: center;
-	cursor: pointer;
-	box-sizing: border-box;
-	padding-left: 8px;
-	padding-right: 8px;
-	position: relative;
-}
-.multi-select-icon-btn {
-	margin-left: auto;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	cursor: pointer;
-	background: none;
-	border: none;
-	padding: 0;
-	margin-right: 4px;
-	flex-shrink: 0;
-}
-.multi-select-placeholder {
-	color: #bdbdbd;
-	font-family: Inter, sans-serif;
-	font-weight: 500;
-	font-size: 14px;
-	line-height: 144%;
-	vertical-align: middle;
-}
-.multi-select-chip {
-	background: #e8f0fe;
-	color: #1d2452;
-	border-radius: 4px;
-	padding: 2px 8px;
-	font-family: Inter, sans-serif;
-	font-weight: 500;
-	font-size: 14px;
-	line-height: 144%;
-	vertical-align: middle;
-	display: flex;
-	align-items: center;
-}
-.multi-select-box.no-border {
-	border: none;
-	border-radius: 0;
-	width: 100%;
-	height: 100%;
-	padding-top: 0;
-	padding-bottom: 0;
-}
-.multi-select-dropdown {
-	position: absolute;
-	left: 0;
-	right: 0;
-	margin-top: 2px;
-	background: #fff;
-	border: 1px solid rgba(29, 36, 82, 0.3);
-	border-radius: 8px;
-	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-	z-index: 100;
-	max-height: 180px;
-	overflow-y: auto;
-}
-.multi-select-search {
-	width: 100%;
-	padding: 4px 8px;
-	border: none;
-	border-bottom: 1px solid #e0e0e0;
-	outline: none;
-	font-family: Inter, sans-serif;
-	font-size: 14px;
-	margin-bottom: 4px;
-	box-sizing: border-box;
-}
-.multi-select-no-options {
-	padding: 8px;
-	color: #bdbdbd;
-	font-size: 13px;
-}
-.multi-select-option {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	padding: 6px 12px;
-	cursor: pointer;
-	font-family: Inter, sans-serif;
-	font-size: 14px;
-	border-radius: 4px;
-	transition: background 0.15s;
-}
-.multi-select-option:hover {
-	background: #f5f7fa;
-}
-</style>

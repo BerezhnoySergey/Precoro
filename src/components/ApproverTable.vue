@@ -80,7 +80,7 @@ function selectStyle(dIndex: number, sIndex: number, total: number) {
 		</p>
 
 		<div
-			class="grid w-[96vw] gap-y-[1.35rem]"
+			class="grid gap-y-[1.35rem]"
 			style="grid-template-columns: 8fr 13fr 12.3fr"
 		>
 			<!-- Header -->
@@ -146,7 +146,7 @@ function selectStyle(dIndex: number, sIndex: number, total: number) {
 
 								<!-- Select -->
 								<div
-									class="flex items-center px-2"
+									class="flex items-center px-2 pr-[2px]"
 									:style="selectStyle(dIndex, sIndex, group.rows.length)"
 								>
 									<MultiSelect

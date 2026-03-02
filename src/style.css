@@ -31,7 +31,6 @@ body {
 	min-height: 100vh;
 	background-color: #f8fafc;
 	overflow-x: hidden;
-	overflow-y: hidden;
 }
 
 #app {
