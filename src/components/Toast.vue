@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { watch, ref } from "vue";
 import SuccessIcon from "../assets/images/icons/success.svg";
+import CrossIcon from "../assets/images/icons/cross.svg";
 
 const props = defineProps<{
 	message: string;
+	type?: "success" | "error";
 	duration?: number;
 }>();
 
@@ -13,6 +15,8 @@ const emit = defineEmits<{
 
 const visible = ref(false);
 let timer: ReturnType<typeof setTimeout> | null = null;
+
+const isError = () => props.type === "error";
 
 watch(
 	() => props.message,
@@ -39,26 +43,35 @@ function close() {
 	<Transition name="toast">
 		<div
 			v-if="visible && message"
-			class="fixed top-[7.5%] right-[1%] z-50 flex items-center gap-2 pl-2 bg-white rounded-[4px] border-l-4 border-[#3fb34f] transition-opacity duration-500 drop-shadow-lg"
+			:class="[
+				'fixed top-[7.5%] right-[1%] z-50 flex items-center gap-2 pl-2 bg-white rounded-[4px] border-l-4 transition-opacity duration-500 drop-shadow-lg',
+				isError() ? 'border-[#e53935]' : 'border-[#3fb34f]',
+			]"
 		>
-			>
 			<img
-				:src="SuccessIcon"
-				alt="Success"
+				:src="isError() ? CrossIcon : SuccessIcon"
+				alt=""
 				class="block w-[1.8rem] h-[1.8rem] mr-[9px] ml-[9px]"
 			/>
 
 			<div
 				class="min-w-[16rem] flex flex-col items-start gap-[0.15rem] py-[0.35rem] px-[0.25rem] border-r border-[rgba(29,36,82,0.1)]"
 			>
-				<div class="text-sm font-bold text-[#1d2452]">SUCCESS</div>
+				<div
+					:class="[
+						'text-sm font-bold',
+						isError() ? 'text-[#e53935]' : 'text-[#1d2452]',
+					]"
+				>
+					{{ isError() ? "ERROR" : "SUCCESS" }}
+				</div>
 				<div class="text-sm font-medium text-[rgba(29,36,82,0.5)]">
 					{{ message }}
 				</div>
 			</div>
 
 			<button
-				class="text-[10px] font-medium text-[rgba(29,36,82,0.5)] cursor-pointer hover:text-[rgba(29,36,82,0.8)] ml-[8px] mr-[8px]"
+				class="text-[10px] font-medium text-[rgba(29,36,82,0.5)] cursor-pointer hover:text-[rgba(29,36,82,0.8)] mr-[8px]"
 				@click="close"
 			>
 				CLOSE

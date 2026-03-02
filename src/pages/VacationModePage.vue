@@ -1,10 +1,10 @@
 <script setup lang="ts">
+import { computed, onMounted, onBeforeUnmount, ref, watch } from "vue";
+import type { BackupApproverRow, UserOption } from "../types";
+import { fetchBackupApproverData, fetchUsers } from "../services/api";
 import { updateVacationMode } from "../services/api";
-import { computed, onMounted, ref } from "vue";
 import ApproverTable from "../components/ApproverTable.vue";
 import DateRangePicker from "../components/DateRangePicker.vue";
-import { fetchBackupApproverData, fetchUsers } from "../services/api";
-import type { BackupApproverRow, UserOption } from "../types";
 import Header from "../components/Header.vue";
 import SubstituteUserBlock from "../components/SubstituteUserBlock.vue";
 import Toast from "../components/Toast.vue";
@@ -12,6 +12,43 @@ import Toast from "../components/Toast.vue";
 const successMessage = ref("");
 const updating = ref(false);
 const isEnabled = ref(false);
+const dateRange = ref({ start: "", end: "" });
+const substituteUser = ref<(string | number)[]>([]);
+const approverRows = ref<BackupApproverRow[]>([]);
+const backupApproverOptions = ref<UserOption[]>([]);
+const backupSelections = ref<Record<number, UserOption | null>>({});
+const loadingRows = ref(false);
+const loadingUsers = ref(false);
+const errorMessage = ref("");
+const isDirty = ref(false);
+
+const multiSelectOptions = computed(() =>
+	backupApproverOptions.value.map((u) => ({ label: u.fullName, value: u.id })),
+);
+
+const canUpdate = computed(() => {
+	if (!dateRange.value.start || !dateRange.value.end) return false;
+	if (!Array.isArray(substituteUser.value) || substituteUser.value.length !== 1)
+		return false;
+	const allSelected = approverRows.value.every((row) =>
+		Boolean(backupSelections.value[row.id]?.id),
+	);
+	return allSelected;
+});
+
+watch(
+	[dateRange, substituteUser, backupSelections],
+	() => {
+		isDirty.value = true;
+	},
+	{ deep: true },
+);
+
+const onBeforeUnload = (e: BeforeUnloadEvent) => {
+	if (isDirty.value) {
+		e.preventDefault();
+	}
+};
 
 async function handleUpdate() {
 	if (!canUpdate.value) return;
@@ -32,40 +69,21 @@ async function handleUpdate() {
 		const res = await updateVacationMode(payload);
 		if (res && res.ok) {
 			isEnabled.value = true;
+			isDirty.value = false;
 			successMessage.value = "Updated successfully.";
 			setTimeout(() => {
 				successMessage.value = "";
 			}, 3000);
 		}
 	} catch (e) {
-		alert("Update failed");
+		errorMessage.value = "Update failed. Please try again.";
+		setTimeout(() => {
+			errorMessage.value = "";
+		}, 3000);
 	} finally {
 		updating.value = false;
 	}
 }
-
-const dateRange = ref({ start: "", end: "" });
-const substituteUser = ref<(string | number)[]>([]);
-const approverRows = ref<BackupApproverRow[]>([]);
-const backupApproverOptions = ref<UserOption[]>([]);
-const multiSelectOptions = computed(() =>
-	backupApproverOptions.value.map((u) => ({ label: u.fullName, value: u.id })),
-);
-const backupSelections = ref<Record<number, UserOption | null>>({});
-const loadingRows = ref(false);
-const loadingUsers = ref(false);
-
-const canUpdate = computed(() => {
-	if (!dateRange.value.start || !dateRange.value.end) return false;
-	if (!Array.isArray(substituteUser.value) || substituteUser.value.length !== 1)
-		return false;
-	const allSelected = approverRows.value.every(
-		(row) =>
-			backupSelections.value[row.id] &&
-			typeof backupSelections.value[row.id]?.id === "number",
-	);
-	return allSelected;
-});
 
 async function loadRows() {
 	loadingRows.value = true;
@@ -89,19 +107,22 @@ async function searchUsers(query: string) {
 	try {
 		const result = await fetchUsers(query, 1);
 		backupApproverOptions.value = Array.isArray(result) ? result : [];
-		if (!Array.isArray(result) || result.length === 0) {
-			console.warn("API вернул пустой массив или не массив:", result);
-		}
 	} catch (err) {
-		console.error("Ошибка при запросе пользователей:", err);
+		console.error("Error", err);
 	} finally {
 		loadingUsers.value = false;
 	}
 }
 
 onMounted(async () => {
+	window.addEventListener("beforeunload", onBeforeUnload);
 	await loadRows();
 	await searchUsers("");
+	isDirty.value = false;
+});
+
+onBeforeUnmount(() => {
+	window.removeEventListener("beforeunload", onBeforeUnload);
 });
 
 function onSelectBackup(rowId: number, value: UserOption | null) {
@@ -115,7 +136,6 @@ function onSelectBackup(rowId: number, value: UserOption | null) {
 <template>
 	<div>
 		<Header />
-
 		<div class="flex items-center justify-between py-[14px]">
 			<h1 class="text-[20px] font-bold">Vacation Mode Settings</h1>
 
@@ -164,5 +184,6 @@ function onSelectBackup(rowId: number, value: UserOption | null) {
 		</div>
 	</div>
 
-	<Toast :message="successMessage" />
+	<Toast :message="successMessage" type="success" />
+	<Toast :message="errorMessage" type="error" />
 </template>

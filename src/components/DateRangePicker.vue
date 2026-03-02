@@ -23,6 +23,13 @@ const pickerVisible = ref(false);
 const formatDate = (date: Date) =>
 	`${String(date.getDate()).padStart(2, "0")}.${String(date.getMonth() + 1).padStart(2, "0")}.${date.getFullYear()}`;
 
+const toISODate = (date: Date) => {
+	const y = date.getFullYear();
+	const m = String(date.getMonth() + 1).padStart(2, "0");
+	const d = String(date.getDate()).padStart(2, "0");
+	return `${y}-${m}-${d}`;
+};
+
 const displayRange = computed(() => {
 	if (!internalValue.value) return ["yyyy-mm-dd", "yyyy-mm-dd"];
 	return internalValue.value.map(formatDate);
@@ -58,17 +65,19 @@ if (typeof window !== "undefined") {
 
 const clearRange = () => {
 	internalValue.value = null;
+	emit("update:modelValue", { start: "", end: "" });
 };
 
-const onPickerUpdate = (value) => {
+const onPickerUpdate = (value: [Date, Date] | null) => {
 	internalValue.value = value;
-	if (
-		value &&
-		value[0] &&
-		value[1] &&
-		value[0].getTime() !== value[1].getTime()
-	) {
-		pickerVisible.value = false;
+	if (value && value[0] && value[1]) {
+		emit("update:modelValue", {
+			start: toISODate(value[0]),
+			end: toISODate(value[1]),
+		});
+		if (value[0].getTime() !== value[1].getTime()) {
+			pickerVisible.value = false;
+		}
 	}
 };
 </script>

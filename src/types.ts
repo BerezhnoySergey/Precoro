@@ -13,10 +13,13 @@ export interface BackupApproverRow {
 
 export interface VacationModePayload {
 	vacationMode: {
-		enable: true;
+		enable: boolean;
 		startDate: number;
 		endDate: number;
 	};
-	substituteUser: number;
-	backupApprovers: Array<{ id: number; backupApproverId: number }>;
+	substituteUser: string | number;
+	backupApprovers: Array<{
+		id: number;
+		backupApproverId: number | undefined;
+	}>;
 }
