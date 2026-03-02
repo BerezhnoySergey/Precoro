@@ -54,16 +54,19 @@ async function handleUpdate() {
 	if (!canUpdate.value) return;
 	updating.value = true;
 	try {
+		const selectedUser = substituteUser.value[0];
+		if (selectedUser === undefined) return;
+
 		const payload = {
 			vacationMode: {
 				enable: true,
 				startDate: Math.floor(new Date(dateRange.value.start).getTime() / 1000),
 				endDate: Math.floor(new Date(dateRange.value.end).getTime() / 1000),
 			},
-			substituteUser: substituteUser.value[0],
+			substituteUser: selectedUser,
 			backupApprovers: approverRows.value.map((row) => ({
 				id: row.id,
-				backupApproverId: backupSelections.value[row.id]?.id,
+				backupApproverId: backupSelections.value[row.id]?.id ?? 0,
 			})),
 		};
 		const res = await updateVacationMode(payload);
